@@ -42,15 +42,24 @@ constexpr int      PRESET_CR      = 5;        // 4/5
 constexpr uint32_t UNSET_HZ  = 0;
 constexpr int      UNSET_TXP = 0xFF;
 
-// Tests the centre frequency only. See decision D3 in tasnode-f0-findings.md:
-// a signal centred near a band edge can extend past it.
+// Tests the centre frequency alone. Hosts send frequency before bandwidth, so
+// this is all that can be known at that step; signal_in_band() is the real test.
 inline bool freq_allowed(uint32_t hz) {
   return hz > BAND_LOW_HZ && hz <= BAND_HIGH_HZ;
 }
 
-// 25 mW x (bw / 3 kHz), in dBm. Assumes power is spread evenly across the
-// bandwidth; see section 6 of tasnode-f0-findings.md on peak density. Callers
-// must pass bw_hz > 0.
+// The whole signal must fit the band, half the bandwidth either side of centre.
+// Worked in doubled integers, so an exact edge isn't decided by rounding.
+inline bool signal_in_band(uint32_t hz, uint32_t bw_hz) {
+  const int64_t centre = 2 * static_cast<int64_t>(hz);
+  const int64_t bw = static_cast<int64_t>(bw_hz);
+  return centre - bw > 2 * static_cast<int64_t>(BAND_LOW_HZ)
+      && centre + bw <= 2 * static_cast<int64_t>(BAND_HIGH_HZ);
+}
+
+// 25 mW x (bw / 3 kHz), in dBm. This takes clause 43's density limit as averaged
+// across the bandwidth, by project decision: see D6 in tasnode-f0-findings.md.
+// Callers must pass bw_hz > 0.
 inline double psd_limit_dbm(uint32_t bw_hz) {
   return 10.0 * std::log10(PSD_MW_PER_3KHZ * (static_cast<double>(bw_hz) / 3000.0));
 }
@@ -96,6 +105,7 @@ inline Check check_radio(uint32_t freq_hz, uint32_t bw_hz, int txp_dbm,
                          int16_t gain_tenths, int16_t loss_tenths) {
   if (freq_hz != UNSET_HZ && !freq_allowed(freq_hz)) return {Verdict::FreqOutOfBand, 0};
   if (bw_hz == 0) return {Verdict::Ok, 0};
+  if (freq_hz != UNSET_HZ && !signal_in_band(freq_hz, bw_hz)) return {Verdict::FreqOutOfBand, 0};
   const int limit = max_tx_dbm(bw_hz, gain_tenths, loss_tenths);
   if (limit < RADIO_MIN_TX_DBM) return {Verdict::NoLegalPower, limit};
   if (txp_dbm != UNSET_TXP && txp_dbm > limit) return {Verdict::TxOverLimit, limit};
@@ -106,7 +116,7 @@ inline Check check_radio(uint32_t freq_hz, uint32_t bw_hz, int txp_dbm,
 inline void format_error(const Check& c, int txp_dbm, char* out, size_t len) {
   switch (c.verdict) {
     case Verdict::FreqOutOfBand:
-      snprintf(out, len, "Rejected: must be above 915.000, up to 928.000 MHz");
+      snprintf(out, len, "Rejected: signal must fit 915.000-928.000 MHz");
       break;
     case Verdict::TxOverLimit:
       snprintf(out, len, "Rejected: %d dBm, limit %d dBm here", txp_dbm, c.limit_dbm);

@@ -81,11 +81,12 @@ bool tasnode_accept_txp(int txp) {
   return tasnode_check_settings(tasnode::UNSET_HZ, lora_bw, txp) == nullptr;
 }
 
-// Hosts send bandwidth before TX power, so refusing a narrower bandwidth because
-// of the old power would fail a legal change. Power comes down first instead,
-// and the host's own power setting is then checked against the new limit.
+// Hosts send frequency, then bandwidth, then TX power, so this is the first step
+// that can test the whole signal against the band. Refusing a narrower bandwidth
+// because of the old power would fail a legal change, so power comes down first
+// instead, and the host's own power setting is checked against the new limit.
 bool tasnode_accept_bw(uint32_t hz) {
-  const tasnode::Check c = tasnode_check(tasnode::UNSET_HZ, hz, lora_txp);
+  const tasnode::Check c = tasnode_check(lora_freq, hz, lora_txp);
   if (c.verdict == tasnode::Verdict::Ok) return true;
   if (c.verdict != tasnode::Verdict::TxOverLimit) { tasnode_describe(c, lora_txp); return false; }
   printf("[tasnode] TX lowered from %d to limit %d dBm for this bandwidth\n", lora_txp, c.limit_dbm);

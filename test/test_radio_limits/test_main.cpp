@@ -81,6 +81,37 @@ void test_band_edges() {
   TEST_ASSERT_FALSE(freq_allowed(928001000));
 }
 
+// 125 kHz is 62.5 kHz either side of centre. The lower edge is exclusive.
+void test_whole_signal_edges_125khz() {
+  TEST_ASSERT_FALSE(signal_in_band(915062500, 125000));
+  TEST_ASSERT_TRUE(signal_in_band(915062501, 125000));
+  TEST_ASSERT_TRUE(signal_in_band(927937500, 125000));
+  TEST_ASSERT_FALSE(signal_in_band(927937501, 125000));
+}
+
+void test_whole_signal_edges_scale_with_bandwidth() {
+  TEST_ASSERT_FALSE(signal_in_band(915250000, 500000));
+  TEST_ASSERT_TRUE(signal_in_band(915250001, 500000));
+  TEST_ASSERT_TRUE(signal_in_band(915062501, 125000));
+  TEST_ASSERT_FALSE(signal_in_band(915062501, 500000));
+  // 62.5 kHz is 31.25 kHz either side, so the half-kHz is kept exactly.
+  TEST_ASSERT_FALSE(signal_in_band(915031250, 62500));
+  TEST_ASSERT_TRUE(signal_in_band(915031251, 62500));
+}
+
+void test_check_refuses_signal_over_the_edge() {
+  // Both centres are in band, but the signal isn't.
+  TEST_ASSERT_TRUE(freq_allowed(915010000));
+  TEST_ASSERT_TRUE(check_radio(915010000, 125000, 2, 30, 0).verdict == Verdict::FreqOutOfBand);
+  TEST_ASSERT_TRUE(freq_allowed(928000000));
+  TEST_ASSERT_TRUE(check_radio(928000000, 125000, 2, 30, 0).verdict == Verdict::FreqOutOfBand);
+}
+
+void test_frequency_step_passes_until_bandwidth_is_known() {
+  // Hosts send frequency first, so a centre near an edge can't be judged yet.
+  TEST_ASSERT_TRUE(check_radio(915010000, 0, UNSET_TXP, 30, 0).verdict == Verdict::Ok);
+}
+
 void test_scotmesh_presets_are_refused() {
   TEST_ASSERT_FALSE(freq_allowed(869462500));
   TEST_ASSERT_FALSE(freq_allowed(433775000));
@@ -158,6 +189,10 @@ int main() {
   RUN_TEST(test_feeder_loss_adds_back);
   RUN_TEST(test_rounds_down_never_up);
   RUN_TEST(test_band_edges);
+  RUN_TEST(test_whole_signal_edges_125khz);
+  RUN_TEST(test_whole_signal_edges_scale_with_bandwidth);
+  RUN_TEST(test_check_refuses_signal_over_the_edge);
+  RUN_TEST(test_frequency_step_passes_until_bandwidth_is_known);
   RUN_TEST(test_scotmesh_presets_are_refused);
   RUN_TEST(test_check_accepts_at_limit);
   RUN_TEST(test_check_rejects_one_over_limit);
