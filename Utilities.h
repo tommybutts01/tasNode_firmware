@@ -14,6 +14,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "Config.h"
+#include "tasnode/tasnode_api.h"
 
 #if HAS_EEPROM
     #if MCU_VARIANT == MCU_NATIVE
@@ -1435,6 +1436,7 @@ int map_modem_output_to_target_power(int modem_output_dbm) {
 }
 
 void setTXPower() {
+	TASNODE_ENFORCE_TXP();
 	if (radio_online) {
 		int mapped_lora_txp = map_target_power_to_modem_output(lora_txp);
 		

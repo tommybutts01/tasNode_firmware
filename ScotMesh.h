@@ -793,6 +793,9 @@ static void pg_map(const RNS::Bytes& rid) {
 static void pg_radio(const RNS::Bytes& rid) {
   const char* msg = nullptr; char kind = 'o'; uint32_t now = millis();
   auto start = [&](const SmRadio& r) {
+#ifdef TASNODE
+    if (const char* e = tasnode_check_settings(r.f, r.bw, r.txp)) { msg = e; kind = 'b'; return; }
+#endif
     if (!sm_trial) sm_trial_prev = sm_radio_now();
     sm_trial = true; sm_trial_until = now + SM_TRIAL_MS; sm_radio_apply(r);
     sm_change(rid, "radio trial"); msg = "Trial on. Keep within 5 min.";
@@ -803,13 +806,20 @@ static void pg_radio(const RNS::Bytes& rid) {
     if (!(r.f > 137000000 && r.f < 1020000000) || !bw_ok || r.sf < 5 || r.sf > 12 || r.cr < 5 || r.cr > 8 || r.txp < -9 || r.txp > 22) { msg = "Out of range. Nothing changed."; kind = 'b'; }
     else start(r);
   }
+#ifdef TASNODE
+  if (Vis("a", "p") && Vis("v", "tas")) start(SmRadio{tasnode::PRESET_FREQ_HZ, tasnode::PRESET_BW_HZ, tasnode::PRESET_SF, tasnode::PRESET_CR, tasnode_preset_txp()}); else
+#endif
   if (Vis("a", "p")) start(Vis("v", "433") ? SmRadio{433775000, 125000, 8, 5, 7} : SmRadio{869462500, 125000, 9, 5, 22});
   if (Vis("a", "k") && sm_trial) { sm_trial = false; eeprom_conf_save(); sm_change(rid, "radio kept"); msg = "Kept and saved."; }
   Ph("Radio"); Pmsg(kind, msg);
   if (sm_trial && !msg) { P("`Fda3Trial: reverts in %lu min`f ", (unsigned long)((sm_trial_until - now) / 60000 + 1)); PL("Keep", 'f', "a=k"); P("\n"); }
   char v[5][12]; snprintf(v[0], 12, "%.3f", lora_freq / 1e6); snprintf(v[1], 12, "%lu", (unsigned long)(lora_bw / 1000)); snprintf(v[2], 12, "%d", lora_sf); snprintf(v[3], 12, "%d", lora_cr); snprintf(v[4], 12, "%d", lora_txp);
   P("MHz "); PF(8, "fq", v[0]); P(" kHz "); PF(3, "bw", v[1]); P("\nSF "); PF(2, "sf", v[2]); P(" CR "); PF(1, "cr", v[3]); P(" dBm "); PF(2, "tx", v[4]); P("\n");
-  PL("Try these", 'f', "fq|bw|sf|cr|tx|a=t"); P("\n" DIM("Preset:") " "); PL("ScotMesh 868", 'f', "a=p|v=868"); P(" "); PL("433", 'f', "a=p|v=433"); P("\n"); PBACK();
+  PL("Try these", 'f', "fq|bw|sf|cr|tx|a=t"); P("\n" DIM("Preset:") " "); PL("ScotMesh 868", 'f', "a=p|v=868"); P(" "); PL("433", 'f', "a=p|v=433");
+#ifdef TASNODE
+  P(" "); PL("Tasmania (placeholder freq)", 'f', "a=p|v=tas");
+#endif
+  P("\n"); PBACK();
 }
 
 static void pg_role(const RNS::Bytes& rid) {

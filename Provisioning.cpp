@@ -13,6 +13,7 @@
 #ifdef HAS_PROVISIONING
 
 #include "Provisioning.h"
+#include "tasnode/tasnode_api.h"
 
 //#include "Config.h"
 
@@ -324,7 +325,10 @@ static void register_provisioning_namespaces() {
 
   metrics.end();        // close "Metrics"
 
-#if defined(LORA_TRANSPORT)
+  TASNODE_REGISTER_PROVISIONING();
+
+// Not on tasnode: on_commit can't refuse a value, so it would bypass the TX clamp.
+#if defined(LORA_TRANSPORT) && !defined(TASNODE)
   // ----- Radio namespace (DISABLED) -----
   //
   Provisioner::instance()
