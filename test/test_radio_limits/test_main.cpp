@@ -129,6 +129,16 @@ void test_error_text_names_the_band() {
   TEST_ASSERT_NOT_NULL(strstr(msg, "928.000"));
 }
 
+void test_tasmania_preset_is_legal_at_default_antenna() {
+  const int txp = max_tx_dbm(PRESET_BW_HZ, DEFAULT_GAIN_TENTHS, DEFAULT_LOSS_TENTHS);
+  TEST_ASSERT_EQUAL_INT(22, txp);
+  TEST_ASSERT_TRUE(check_radio(PRESET_FREQ_HZ, PRESET_BW_HZ, txp, DEFAULT_GAIN_TENTHS,
+                               DEFAULT_LOSS_TENTHS).verdict == Verdict::Ok);
+  TEST_ASSERT_EQUAL_UINT32(125000, PRESET_BW_HZ);
+  TEST_ASSERT_EQUAL_INT(9, PRESET_SF);
+  TEST_ASSERT_EQUAL_INT(5, PRESET_CR);
+}
+
 void test_antenna_ranges() {
   TEST_ASSERT_TRUE(gain_in_range(30));
   TEST_ASSERT_FALSE(gain_in_range(301));
@@ -156,6 +166,7 @@ int main() {
   RUN_TEST(test_check_no_legal_power);
   RUN_TEST(test_error_text_names_the_limit);
   RUN_TEST(test_error_text_names_the_band);
+  RUN_TEST(test_tasmania_preset_is_legal_at_default_antenna);
   RUN_TEST(test_antenna_ranges);
   return UNITY_END();
 }

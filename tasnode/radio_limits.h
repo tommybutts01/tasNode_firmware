@@ -31,6 +31,13 @@ constexpr int16_t MAX_GAIN_TENTHS = 300;
 constexpr int16_t MIN_LOSS_TENTHS = 0;
 constexpr int16_t MAX_LOSS_TENTHS = 200;
 
+// "Tasmania" radio preset. PLACEHOLDER FREQUENCY: an in-band value for bench use
+// only, not a chosen channel. The real one comes from the SDR survey (spec 7.3).
+constexpr uint32_t PRESET_FREQ_HZ = 917000000;
+constexpr uint32_t PRESET_BW_HZ   = 125000;
+constexpr int      PRESET_SF      = 9;
+constexpr int      PRESET_CR      = 5;        // 4/5
+
 // Sentinels for a setting that hasn't been configured yet (Config.h defaults).
 constexpr uint32_t UNSET_HZ  = 0;
 constexpr int      UNSET_TXP = 0xFF;
