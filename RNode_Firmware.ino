@@ -44,6 +44,7 @@
 bool sm_leds_off = false;
 bool sm_dfu_window = false;
 #include "Utilities.h"
+#include "tasnode/tasnode_config.h"
 #include "DeviceUID.h"
 #include "Platform.h"
 #include "WebSocketConsole.h"
@@ -1622,6 +1623,7 @@ void update_radio_lock() {
   } else {
     radio_locked = true;
   }
+  TASNODE_RADIO_GATE();
 }
 
 bool queue_full() { return (queue_height >= CONFIG_QUEUE_MAX_LENGTH || queued_bytes >= CONFIG_QUEUE_SIZE); }
@@ -1937,6 +1939,7 @@ void serial_callback(uint8_t sbyte) {
           if (freq == 0) {
             kiss_indicate_frequency();
           } else {
+            TASNODE_ONLY_IF(tasnode_accept_freq(freq))
             lora_freq = freq;
             if (op_mode == MODE_HOST) setFrequency();
             kiss_indicate_frequency();
@@ -1960,6 +1963,7 @@ void serial_callback(uint8_t sbyte) {
           if (bw == 0) {
             kiss_indicate_bandwidth();
           } else {
+            TASNODE_ONLY_IF(tasnode_accept_bw(bw))
             lora_bw = bw;
             if (op_mode == MODE_HOST) setBandwidth();
             kiss_indicate_bandwidth();
@@ -1994,6 +1998,7 @@ void serial_callback(uint8_t sbyte) {
           if (txp > 17) txp = 17;
         #endif
 
+        TASNODE_ONLY_IF(tasnode_accept_txp(txp))
         lora_txp = txp;
         if (op_mode == MODE_HOST) setTXPower();
         kiss_indicate_txpower();

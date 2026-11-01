@@ -793,6 +793,9 @@ static void pg_map(const RNS::Bytes& rid) {
 static void pg_radio(const RNS::Bytes& rid) {
   const char* msg = nullptr; char kind = 'o'; uint32_t now = millis();
   auto start = [&](const SmRadio& r) {
+#ifdef TASNODE
+    if (const char* e = tasnode_check_settings(r.f, r.bw, r.txp)) { msg = e; kind = 'b'; return; }
+#endif
     if (!sm_trial) sm_trial_prev = sm_radio_now();
     sm_trial = true; sm_trial_until = now + SM_TRIAL_MS; sm_radio_apply(r);
     sm_change(rid, "radio trial"); msg = "Trial on. Keep within 5 min.";
